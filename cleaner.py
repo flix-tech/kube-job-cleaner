@@ -40,7 +40,10 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
             continue
     start_time = parse_time(job.obj['status'].get('startTime'))
     seconds_since_start = now - start_time
-    timeout_override = job.obj['metadata'].get('annotations').get('cleanup-timeout')
+    annotations = job.obj['metadata'].get('annotations')
+    if annotations is None:
+        continue
+    timeout_override = annotations.get('cleanup-timeout')
     timeout_jobs = int(timeout_override) if timeout_override else args.timeout_seconds
     #Check whether timeout is activated. Always obeys the annotation on the job
     if timeout_jobs < 0:
