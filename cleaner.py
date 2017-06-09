@@ -41,11 +41,13 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
     start_time = parse_time(job.obj['status'].get('startTime'))
     seconds_since_start = now - start_time
     annotations = job.obj['metadata'].get('annotations')
-    if annotations is None:
-        continue
-    timeout_override = annotations.get('cleanup-timeout')
-    timeout_jobs = int(timeout_override) if timeout_override else args.timeout_seconds
-    #Check whether timeout is activated. Always obeys the annotation on the job
+    # Determine the timeout in seconds for this job
+    timeout_jobs = args.timeout_seconds
+    if annotations is not None:
+        timeout_override = annotations.get('cleanup-timeout')
+        if timeout_override is not None:
+            timeout_jobs = int(timeout_override)
+    # Check whether a timeout is active for this job.
     if timeout_jobs < 0:
         continue
     if start_time and seconds_since_start > timeout_jobs:
@@ -54,7 +56,6 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
             print('** DRY RUN **')
         else:
             job.delete()
-        continue
 
 for pod in pykube.Pod.objects(api, namespace=pykube.all):
     if pod.obj['status'].get('phase') in ('Succeeded', 'Failed'):
