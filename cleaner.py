@@ -36,6 +36,8 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
             if args.dry_run:
                 print('** DRY RUN **')
             else:
+                job.scale(replicas=0)
+                time.sleep(10)
                 job.delete()
             continue
     start_time = parse_time(job.obj['status'].get('startTime'))
@@ -55,6 +57,8 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
         if args.dry_run:
             print('** DRY RUN **')
         else:
+            job.scale(replicas=0)
+            time.sleep(10)
             job.delete()
 
 for pod in pykube.Pod.objects(api, namespace=pykube.all):
