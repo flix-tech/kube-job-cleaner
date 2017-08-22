@@ -25,7 +25,8 @@ except FileNotFoundError:
 api = pykube.HTTPClient(config)
 
 now = time.time()
-for job in pykube.Job.objects(api, namespace=pykube.all):
+deleted_jobs = list()
+for job in pykube.Job.objects(api, namespace=pykube.all).iterator():
     completion_time = job.obj['status'].get('completionTime')
     status = job.obj['status']
     if (status.get('succeeded') or status.get('failed')) and completion_time:
@@ -33,6 +34,7 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
         seconds_since_completion = now - completion_time
         if seconds_since_completion > args.seconds:
             print('Deleting {} ({:.0f}s old)..'.format(job.name, seconds_since_completion))
+            deleted_jobs.append(job.name)
             if args.dry_run:
                 print('** DRY RUN **')
             else:
@@ -52,12 +54,22 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
         continue
     if start_time and seconds_since_start > timeout_jobs:
         print('Deleting Job because of timeout {} ({:.0f}s running)..'.format(job.name, seconds_since_start))
+        deleted_jobs.append(job.name)
         if args.dry_run:
             print('** DRY RUN **')
         else:
             job.delete()
 
 for pod in pykube.Pod.objects(api, namespace=pykube.all):
+    try:
+        if pod.obj['metadata']['annotations']['reference']['kind'] == 'Job' and pod.obj['metadata']['annotations']['reference']['name'] in deleted_jobs:
+            if args.dry_run:
+                print('** DRY RUN **')
+            else:
+                pod.delete()
+            continue
+    except KeyError as e:
+        print("Pod not created by controller?: ", e)
     if pod.obj['status'].get('phase') in ('Succeeded', 'Failed'):
         seconds_since_completion = 0
         if pod.obj['status'].get('containerStatuses') is None:
