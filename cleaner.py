@@ -42,7 +42,11 @@ def delete_job(job,seconds_since_completion, reason=""):
     else:
         job.delete()
     for pod in pykube.Pod.objects(api, namespace=pykube.all).filter(selector="controller-uid = {}".format(jobuid)):
-        pod.delete()
+        print('Deleting pod {} (child of {}) ..'.format(pod.name, job.name))
+        if args.dry_run:
+            print('** DRY RUN **')
+        else:
+            pod.delete()
 
 def delete_jobs_after_timeout(api):
     """
@@ -83,8 +87,8 @@ def old_stopped_pods(api):
     :return:
     """
     for pod in pykube.Pod.objects(api, namespace=pykube.all):
-        # Finished (because it was part of a job) or opted into garbage collection
-        if pod.obj['status'].get('phase') in ('Succeeded', 'Failed') or ('cleanup-finished' in pod.obj['metadata'].get('annotations')):
+        # Finished and opted into garbage collection
+        if pod.obj['status'].get('phase') in ('Succeeded', 'Failed') and ('cleanup-finished' in pod.obj['metadata'].get('annotations',[])):
             seconds_since_completion = 0
             if pod.obj['status'].get('containerStatuses') is None:
                 print("Warning: Skipping pod without containers ({})".format(pod.obj['metadata'].get('name')))
@@ -108,7 +112,6 @@ def old_stopped_pods(api):
 if __name__ == '__main__':
     api = create_api()
     delete_jobs_after_timeout(api)
-    # Usecase #1
     for pod, seconds_since_completion in old_stopped_pods(api):
         print('Deleting {} ({:.0f}s old)..'.format(pod.name, seconds_since_completion))
         if args.dry_run:
@@ -120,8 +123,11 @@ if __name__ == '__main__':
     current_jobs_uids = set()
     for job in pykube.Job.objects(api, namespace=pykube.all):
         current_jobs_uids.add(job.obj["metadata"]["uid"])
+    # Find pods whose rc does not longer exist. This shouldn't happen in more recent versions of K8s.
     for pod in pykube.Pod.objects(api, namespace=pykube.all).filter(selector="job-name"):
         if pod.obj['metadata']['labels']['controller-uid'] not in current_jobs_uids:
-            pod.delete()
-    print("Finished")
-    time.sleep(10000)
+            print('Deleting orphaned pod {}..'.format(pod.name))
+            if args.dry_run:
+                print('** DRY RUN **')
+            else:
+                pod.delete()
