@@ -53,7 +53,7 @@ def delete_jobs_after_timeout(api):
     :param api:
     :return:
     """
-    for job in pykube.Job.objects(api, namespace=pykube.all):
+    for job in pykube.Job.objects(api, namespace=pykube.all).iterator():
         completion_time = job.obj['status'].get('completionTime')
         status = job.obj['status']
         # is job finished?
@@ -82,11 +82,11 @@ def delete_jobs_after_timeout(api):
 
 def old_stopped_pods(api):
     """
-    Finds stopped(all containers!) pods that exceed the maximum age.
+    Finds stopped pods that exceed the maximum age.
     Uses annotation flag "cleanup-finished" to determine, whether timeout should apply to regular pods.
     :return:
     """
-    for pod in pykube.Pod.objects(api, namespace=pykube.all):
+    for pod in pykube.Pod.objects(api, namespace=pykube.all).iterator():
         # Finished and opted into garbage collection
         if pod.obj['status'].get('phase') in ('Succeeded', 'Failed') and ('cleanup-finished' in pod.obj['metadata'].get('annotations',[])):
             seconds_since_completion = 0
@@ -121,10 +121,10 @@ if __name__ == '__main__':
 
 
     current_jobs_uids = set()
-    for job in pykube.Job.objects(api, namespace=pykube.all):
+    for job in pykube.Job.objects(api, namespace=pykube.all).iterator():
         current_jobs_uids.add(job.obj["metadata"]["uid"])
     # Find pods whose rc does not longer exist. This shouldn't happen in more recent versions of K8s.
-    for pod in pykube.Pod.objects(api, namespace=pykube.all).filter(selector="job-name"):
+    for pod in pykube.Pod.objects(api, namespace=pykube.all).filter(selector="job-name").iterator():
         if pod.obj['metadata']['labels']['controller-uid'] not in current_jobs_uids:
             print('Deleting orphaned pod {}..'.format(pod.name))
             if args.dry_run:
