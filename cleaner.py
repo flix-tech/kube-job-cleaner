@@ -12,7 +12,7 @@ def parse_time(s: str):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--timeout-finished-seconds', type=int, default=3600, help='Delete all finished jobs older than ..')
+parser.add_argument('--timeout-finished-seconds', type=int, default=3600, help='Delete all finished pods annotated with "cleanup-finished" and jobs older than ..')
 parser.add_argument('--timeout-all-seconds', type=int, default=-1, help='Kill all jobs older than ..')
 parser.add_argument('--dry-run', action='store_true', help='Dry run mode')
 args = parser.parse_args()

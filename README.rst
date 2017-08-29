@@ -24,9 +24,9 @@ Deploying:
 
 There are a few options:
 
-``--seconds``
-    Number of seconds after job completion to remove the job (default: 1 hour)
-``--timeout-seconds``
+``--timeout-finished-seconds``
+    Delete all finished pods annotated with "cleanup-finished" and jobs older than (default: 1 hour)
+``--timeout-all-seconds``
     Kill all jobs after X seconds (default: never)
 ``--dry-run``
-    Do not actually remove any jobs, only print what would be done
+    Do not actually remove any objects, only print what would be done
