@@ -1,0 +1,21 @@
+services:
+    - docker:dind
+
+docker:
+  script:
+    - docker login -u ${DCR_USER} -p ${DCR_PASSWORD} dcr.mfb.io
+    - docker login -u ${DCR_DUMP_USER} -p ${DCR_DUMP_PASSWORD} ci-dump-dcr.mfb.io
+    - docker build -t ci-dump-dcr.mfb.io/devops/kube-job-cleaner .
+    - docker tag ci-dump-dcr.mfb.io/devops/kube-job-cleaner ci-dump-dcr.mfb.io/devops/kube-job-cleaner:${CI_COMMIT_SHA}
+    - docker tag ci-dump-dcr.mfb.io/devops/kube-job-cleaner ci-dump-dcr.mfb.io/devops/kube-job-cleaner:${CI_COMMIT_REF_SLUG}
+    - docker tag ci-dump-dcr.mfb.io/devops/kube-job-cleaner dcr.mfb.io/devops/kube-job-cleaner:${CI_COMMIT_REF_SLUG}
+    - docker tag ci-dump-dcr.mfb.io/devops/kube-job-cleaner dcr.mfb.io/devops/kube-job-cleaner:latest
+    - docker push ci-dump-dcr.mfb.io/devops/kube-job-cleaner:${CI_COMMIT_SHA}
+    - docker push ci-dump-dcr.mfb.io/devops/kube-job-cleaner:${CI_COMMIT_REF_SLUG}
+    - docker push ci-dump-dcr.mfb.io/devops/kube-job-cleaner:latest
+    - docker login -u ${DCR_PROD_USER} -p ${DCR_PROD_PASSWORD} dcr.mfb.io
+    - docker push dcr.mfb.io/devops/kube-job-cleaner:${CI_COMMIT_REF_SLUG}
+    - docker push dcr.mfb.io/devops/kube-job-cleaner:latest
+
+  tags:
+    - dind-builder
